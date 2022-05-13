@@ -2,18 +2,18 @@
 pragma solidity ^0.8;
 
 // https://cs.opensource.google/go/go/+/master:src/math/rand/rand.go;l=5;drc=690ac4071fa3e07113bf371c9e74394ab54d6749
-contract GoMathRand {
+contract GoMathRandLimited {
     int64[] public values = new int64[](10);
 
-    function generateSingle(uint256 seed, int64 n) public {
+    function generateSingle(uint256 seed, int32 n) public {
         Source memory rng = newRand(seed);
-        values[0] = Intn(rng, n);
+        values[0] = Int31n(rng, n);
     }
 
-    function generateMany(uint256 seed, int64 n) public {
+    function generateMany(uint256 seed, int32 n) public {
         Source memory rng = newRand(seed);
         for (uint256 i = 0; i < 10; i++) {
-            values[i] = Intn(rng, n);
+            values[i] = Int31n(rng, n);
         }
     }
 
@@ -48,15 +48,6 @@ contract GoMathRand {
 
     // Intn returns, as an int, a non-negative pseudo-random number in the half-open interval [0,n).
     // It panics if n <= 0.
-    function Intn(Source memory rng, int64 n) public pure returns (int64) {
-        require(n > 0, "invalid argument to Int31n");
-        if (n <= type(int32).max) {
-            return int32(Int31n(rng, int32(n)));
-        } else {
-            return int64(Int63n(rng, int64(n)));
-        }
-    }
-
     function Int31n(Source memory rng, int32 n) public pure returns (int32) {
         require(n > 0, "invalid argument to Int31n");
         if (n & (n - 1) == 0) {
@@ -73,36 +64,21 @@ contract GoMathRand {
         }
     }
 
-    function Int63n(Source memory rng, int64 n) public pure returns (int64) {
-        require(n > 0, "invalid argument to Int63n");
-        if (n & (n - 1) == 0) {
-            // n is power of two, can mask
-            return Int63(rng) & (n - 1);
-        }
-        unchecked {
-            int64 max = int64((1 << 63) - 1 - ((1 << 63) % uint64(n)));
-            int64 v = Int63(rng);
-            while (v > max) {
-                v = Int63(rng);
-            }
-            return v % n;
-        }
-    }
-
     function Int31(Source memory rng) public pure returns (int32) {
         return int32(Int63(rng) >> 32);
     }
 
     // rng.go
 
+    // NOTE: This is a modified version that allows only for a stream of up to
+    // 15 random numbers to save the PRNG initialization gas cost.
+
     uint16 constant RNG_LEN = 607;
     uint16 constant RNG_TAP = 273;
     uint64 constant RNG_MASK = uint64(type(int64).max);
     int32 constant int32max = type(int32).max;
 
-    int32 constant A = 48271;
-    int32 constant Q = 44488;
-    int32 constant R = 3399;
+    uint8 constant RNG_COUNT = 10;
 
     struct Source {
         uint16 tap;
@@ -111,6 +87,7 @@ contract GoMathRand {
     }
 
     // https://cs.opensource.google/go/go/+/master:src/math/rand/rng.go;l=204;drc=2bea43b0e7f3e636ffc8239f9d3fccdd5d763c8b
+    // NOTE: We assume seed is not zero
     function Seed(Source memory rng, int64 seed) internal pure {
         rng.tap = 0;
         rng.feed = RNG_LEN - RNG_TAP;
@@ -119,41 +96,67 @@ contract GoMathRand {
         if (seed < 0) {
             seed += int32max;
         }
-        if (seed == 0) {
-            seed = 89482311;
-        }
+        // if (seed == 0) {
+        //     seed = 89482311;
+        // }
 
-        int32 x = int32(seed);
-        // NOTE: This is split into two loops comparing to the original to save
-        // on type conversions
-        for (int256 i = -20; i < 0; i++) {
+        // We keep the seed in a full word instead to save on constant widening
+        uint256 x = uint64(seed);
+        int64 u;
+        unchecked {
+            // NOTE: This is split into two loops comparing to the original to save
+            // on type conversions
             x = seedrand(x);
-        }
-        for (uint256 i = 0; i < RNG_LEN; i++) {
             x = seedrand(x);
-            if (i >= 0) {
-                int64 u;
-                u = int64(x) << 40;
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            x = seedrand(x);
+            // for (int256 i = -20; i < 0; i++) {
+            //     // NOTE: We actually are interested in modular arithmetic, so just
+            //     // wrap as much as we can and then only apply the final modulo
+            //     x = seedrand(x);
+            // }
+            for (uint256 i = 0; i < RNG_LEN; i++) {
                 x = seedrand(x);
-                u ^= int64(x) << 20;
-                x = seedrand(x);
-                u ^= int64(x);
-                u ^= rngCooked(i);
-                rng.vec[i] = u;
+
+                bool inTap = i == 0 || RNG_LEN - i <= RNG_COUNT;
+                bool inFeed = RNG_LEN - RNG_TAP - i <= RNG_COUNT;
+                if (!inTap && !inFeed) {
+                    x = seedrand(x);
+                    x = seedrand(x);
+                } else {
+                    u = int64(int256(x)) << 40;
+                    x = seedrand(x);
+                    u ^= int64(int256(x)) << 20;
+                    x = seedrand(x);
+                    u ^= int64(int256(x));
+                    u ^= rngCooked(i);
+                    rng.vec[i] = u;
+                }
             }
         }
     }
 
+    // https://en.wikipedia.org/wiki/Lehmer_random_number_generator
     // seed rng x[n+1] = 48271 * x[n] mod (2**31 - 1)
-    function seedrand(int32 x) internal pure returns (int32) {
-        unchecked {
-            int32 hi = x / Q;
-            int32 lo = x % Q;
-            x = A * lo - R * hi;
-            if (x < 0) {
-                x += int32max;
-            }
-            return x;
+    function seedrand(uint256 x) internal pure returns (uint256 r) {
+        assembly {
+            r := mulmod(x, 48271, 0x7fffffff)
         }
     }
 
