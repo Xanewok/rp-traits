@@ -36,6 +36,8 @@ contract("GoMathRand", (accounts) => {
     }
     const { receipt } = await limited.generateMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
     console.log({ gasUsed: receipt.gasUsed });
+    const { receipt: { gasUsed } } = await limited.computeMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
+    console.log({ gasUsed });
 
     expected = [
       13875352,

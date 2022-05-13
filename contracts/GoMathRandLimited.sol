@@ -17,6 +17,20 @@ contract GoMathRandLimited {
         }
     }
 
+    function computeMany(uint256 seed, int32 n) public pure {
+        Source memory rng = newRand(seed);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+        Int31n(rng, n);
+    }
+
     // rand.go
 
     /// @dev Equivalent of Go's `rand.New(rand.NewSource(seed.Int64))`
@@ -83,18 +97,22 @@ contract GoMathRandLimited {
     struct Source {
         uint16 tap;
         uint16 feed;
-        int64[RNG_LEN] vec;
+        // int64[RNG_LEN] vec;
+        int64[RNG_COUNT * 2] vec;
     }
 
     // https://cs.opensource.google/go/go/+/master:src/math/rand/rng.go;l=204;drc=2bea43b0e7f3e636ffc8239f9d3fccdd5d763c8b
     // NOTE: We assume seed is not zero
     function Seed(Source memory rng, int64 seed) internal pure {
         rng.tap = 0;
-        rng.feed = RNG_LEN - RNG_TAP;
+        rng.feed = RNG_COUNT;
+        // rng.feed = RNG_LEN - RNG_TAP;
 
-        seed = seed % int32max;
-        if (seed < 0) {
-            seed += int32max;
+        unchecked {
+            seed = seed % int32max;
+            if (seed < 0) {
+                seed += int32max;
+            }
         }
         // if (seed == 0) {
         //     seed = 89482311;
@@ -102,7 +120,8 @@ contract GoMathRandLimited {
 
         // We keep the seed in a full word instead to save on constant widening
         uint256 x = uint64(seed);
-        int64 u;
+        // int64 u;
+        uint256 u;
         unchecked {
             // NOTE: This is split into two loops comparing to the original to save
             // on type conversions
@@ -131,22 +150,26 @@ contract GoMathRandLimited {
             //     // wrap as much as we can and then only apply the final modulo
             //     x = seedrand(x);
             // }
+
+            uint64 counter = 0;
             for (uint256 i = 0; i < RNG_LEN; i++) {
                 x = seedrand(x);
 
-                bool inTap = i == 0 || RNG_LEN - i <= RNG_COUNT;
-                bool inFeed = RNG_LEN - RNG_TAP - i <= RNG_COUNT;
+                bool inTap = i >= RNG_LEN - RNG_COUNT;
+                bool inFeed = i >= (RNG_LEN - RNG_TAP - RNG_COUNT) &&
+                    i < (RNG_LEN - RNG_TAP);
                 if (!inTap && !inFeed) {
                     x = seedrand(x);
                     x = seedrand(x);
                 } else {
-                    u = int64(int256(x)) << 40;
+                    u = x << 40;
                     x = seedrand(x);
-                    u ^= int64(int256(x)) << 20;
+                    u ^= x << 20;
                     x = seedrand(x);
-                    u ^= int64(int256(x));
-                    u ^= rngCooked(i);
-                    rng.vec[i] = u;
+                    u ^= x;
+                    u ^= uint64(rngCooked(i));
+
+                    rng.vec[counter++] = int64(uint64(u));
                 }
             }
         }
@@ -162,13 +185,15 @@ contract GoMathRandLimited {
 
     function Uint64(Source memory rng) public pure returns (uint64) {
         if (rng.tap == 0) {
-            rng.tap = RNG_LEN - 1;
+            // rng.tap = RNG_LEN - 1;
+            rng.tap = (2 * RNG_COUNT) - 1;
         } else {
             rng.tap--;
         }
 
         if (rng.feed == 0) {
-            rng.feed = RNG_LEN - 1;
+            // rng.feed = RNG_LEN - 1;
+            rng.feed = (2 * RNG_COUNT) - 1;
         } else {
             rng.feed--;
         }
