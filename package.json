@@ -3,13 +3,15 @@
   "private": true,
   "scripts": {
     "test": "truffle test",
-    "compile": "truffle compile"
+    "compile": "truffle compile",
+    "migrate": "truffle migrate"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.5.0"
   },
   "devDependencies": {
-    "truffle": "5.5.9",
+    "truffle": "5.5.14",
+    "ganache": "7",
     "truffle-plugin-verify": "^0.5.24"
   }
 }
