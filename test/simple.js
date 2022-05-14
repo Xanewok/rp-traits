@@ -34,10 +34,10 @@ contract("GoMathRand", (accounts) => {
       const value = `${await limited.values(i)}`;
       assert.equal(value, expected[i])
     }
-    const { receipt } = await limited.generateMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
-    console.log({ gasUsed: receipt.gasUsed });
-    const { receipt: { gasUsed } } = await limited.computeMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
-    console.log({ gasUsed });
+    const call1 = await limited.generateMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
+    console.log({ gasUsed: call1?.receipt?.gasUsed });
+    const call2 = await limited.computeMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
+    console.log({ gasUsed: call2?.receipt?.gasUsed });
 
     expected = [
       13875352,
