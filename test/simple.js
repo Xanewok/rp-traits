@@ -3,58 +3,49 @@ const assert = require("assert");
 const GoMathRand = artifacts.require("GoMathRand");
 const GoMathRandLimited = artifacts.require("GoMathRandLimited");
 
+function pickTraits(obj) {
+  const attrs = ["class", "body", "weapon", "hair", "hairColor", "back", "aura", "top", "bottom"]
+  const ret = {};
+  for (const key of attrs) {
+    ret[key] = obj[key];
+  }
+  return ret;
+}
+
 contract("GoMathRand", (accounts) => {
 
   it("newRand", async () => {
-    const rng = await GoMathRand.deployed();
     const limited = await GoMathRandLimited.deployed();
+    const fighters = {
+      1918: {
+        seed: "2539103265505867606901872458139978623723014567987151303084214062672181312887",
+        traits: {
+          class: '0',
+          body: '2', weapon: '2',
+          hair: '5', hairColor: '3',
+          back: '0', aura: '0',
+          top: '7', bottom: '1'
+        }
+      },
+      20801: {
+        seed: "103256593631039286645257230999332642700195251781097825023731579771058446619717",
+        traits: {
+          class: '4',
+          body: '2', weapon: '8',
+          hair: '16', hairColor: '3',
+          back: '18', aura: '3',
+          top: '8', bottom: '3'
 
-    const myRng = await rng.newRand(911);
-    const value1 = await rng.Intn(myRng, 35);
-    assert.equal(value1, 33);
-
-    const myLimited = await limited.newRand(911);
-    const value1Limited = await limited.Int31n(myLimited, 35);
-    assert.equal(value1Limited, 33);
-    await limited.generateMany(911, 35);
-    let expected;
-    expected = [
-      33,
-      22,
-      22,
-      16,
-      17,
-      29,
-      13,
-      7,
-      18,
-      1,
-    ];
-    for (let i = 0; i < 10; i++) {
-      const value = `${await limited.values(i)}`;
-      assert.equal(value, expected[i])
+        }
+      }
+    };
+    for (const fighter of Object.values(fighters)) {
+      const traits = await limited.getTraits(fighter.seed);
+      assert.deepEqual(fighter.traits, pickTraits(traits))
     }
-    const call1 = await limited.generateMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
+
+    const call1 = await limited.storeTraits(fighters[20801].seed);
     console.log({ gasUsed: call1?.receipt?.gasUsed });
-    const call2 = await limited.computeMany("105779926529366228504990970003713286107530024193944566341142813727459338091771", 50000000);
-    console.log({ gasUsed: call2?.receipt?.gasUsed });
-
-    expected = [
-      13875352,
-      33488040,
-      3075775,
-      34509352,
-      1990175,
-      14640839,
-      21896810,
-      28369212,
-      46008401,
-      36697042,
-    ];
-    for (let i = 0; i < 10; i++) {
-      const value = `${await limited.values(i)}`;
-      assert.equal(value, expected[i])
-    }
 
   });
 });

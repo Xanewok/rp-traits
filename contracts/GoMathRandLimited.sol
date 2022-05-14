@@ -1,44 +1,294 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8;
 
-// https://cs.opensource.google/go/go/+/master:src/math/rand/rand.go;l=5;drc=690ac4071fa3e07113bf371c9e74394ab54d6749
 contract GoMathRandLimited {
-    int64[] public values = new int64[](10);
-
-    function generateSingle(uint256 seed, int32 n) public {
-        Source memory rng = newRand(seed);
-        values[0] = Int31n(rng, n);
+    struct Traits {
+        uint8 class;
+        uint8 body;
+        uint8 weapon;
+        uint8 hair;
+        uint8 hairColor;
+        uint8 back;
+        uint8 aura;
+        uint8 top;
+        uint8 bottom;
     }
 
-    function generateMany(uint256 seed, int32 n) public {
+    // The original approach used an unstable sort as part of the weighted random
+    // selection via https://github.com/mroth/weightedrand. We avoid re-implementing
+    // Go's unstable sort here and just hardcode the resulting order of the items.
+    // Tightly pack values in a byte array rather than waste 32 bytes on a single ID,
+    // which is what Solidity does for regular arrays.
+    // For partial sums we use a a 2 byte little-endian encoding.
+    bytes constant classIds = "\x00\x01\x02\x03\x04\x05\x06";
+    bytes constant classPartialSum =
+        "\x0a\x00\x14\x00\x1e\x00\x28\x00\x32\x00\x3c\x00";
+    bytes constant bodyIds = "\x05\x03\x04\x00\x01\x02";
+    bytes constant bodyPartialSum =
+        "\x01\x00\x08\x00\x0f\x00\x2b\x00\x47\x00\x63\x00";
+    bytes constant weaponIds = "\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00";
+    bytes constant weaponPartialSum =
+        "\x01\x00\x06\x00\x0c\x00\x13\x00\x1c\x00\x26\x00\x32\x00\x3f\x00\x4e\x00\x64\x00";
+    bytes constant hairIds =
+        "\x11\x02\x03\x13\x04\x0d\x0a\x01\x0b\x10\x0c\x00\x09\x08\x0e\x0f\x07\x06\x12\x05\x14\x15\x16";
+    bytes constant hairPartialSum =
+        "\x0a\x00\x49\x00\x88\x00\xc7\x00\x5d\x01\xf3\x01\x89\x02\xb5\x03\xe1\x04\x0d\x06\x39\x07\x2d\x09\x21\x0b\x15\x0d\x09\x0f\xfd\x10\xf1\x12\xe5\x14\xd9\x16\xcd\x18\xc1\x1a\xb5\x1c\xa9\x1e";
+    bytes constant hairColorIds = "\x06\x01\x04\x03\x02\x05\x00\x07\x08";
+    bytes constant hairColorPartialSum =
+        "\x19\x00\x4b\x00\x7d\x00\xfa\x00\x90\x01\x26\x02\xbc\x02\x52\x03\xe8\x03";
+    bytes constant backIds =
+        "\x0a\x07\x0f\x03\x02\x10\x04\x05\x06\x08\x09\x01\x12\x11\x13\x0e\x0d\x0c\x0b\x00";
+    bytes constant backPartialSum =
+        "\x01\x00\x03\x00\x05\x00\x0a\x00\x0f\x00\x14\x00\x1e\x00\x28\x00\x32\x00\x3c\x00\x46\x00\x50\x00\x5a\x00\x64\x00\x6e\x00\x87\x00\xa0\x00\xb9\x00\xd2\x00\x22\x01";
+    // Archers/Slayers can't have some back items and their lack unstably affects
+    // the order, so consider those separately
+    bytes constant backArcherSlayerId =
+        "\x0a\x0f\x02\x03\x01\x04\x05\x06\x08\x09\x11\x13\x0d\x0e\x0c\x0b\x00";
+    bytes constant backArcherSlayerPartialSum =
+        "\x01\x00\x03\x00\x08\x00\x0d\x00\x17\x00\x21\x00\x2b\x00\x35\x00\x3f\x00\x49\x00\x53\x00\x5d\x00\x76\x00\x8f\x00\xa8\x00\xc1\x00\x11\x01";
+    bytes constant auraIds =
+        "\x02\x0b\x08\x0c\x04\x0a\x06\x0f\x07\x09\x05\x03\x01\x0d\x0e\x00";
+    bytes constant auraPartialSum =
+        "\x32\x00\x64\x00\xaf\x00\xfa\x00\x45\x01\x90\x01\xdb\x01\x26\x02\x8a\x02\xee\x02\x52\x03\xb6\x03\x1a\x04\x7e\x04\xe2\x04\x10\x27";
+    bytes constant topIds =
+        "\x37\x36\x35\x34\x30\x32\x31\x33\x2f\x2e\x2d\x2c\x2b\x2a\x29\x28\x21\x26\x25\x24\x22\x1c\x16\x17\x18\x19\x1a\x1b\x27\x1d\x1e\x1f\x20\x23\x14\x15\x13\x12\x11\x10\x0f\x0e\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00";
+    bytes constant topPartialSum =
+        "\x32\x00\x64\x00\x96\x00\xc8\x00\x13\x01\x5e\x01\xa9\x01\xf4\x01\x3f\x02\x8a\x02\xd5\x02\x20\x03\x6b\x03\xb6\x03\x01\x04\x4c\x04\xe2\x04\x78\x05\x0e\x06\xa4\x06\x3a\x07\xd0\x07\x66\x08\xfc\x08\x92\x09\x28\x0a\xbe\x0a\x54\x0b\xea\x0b\x80\x0c\x16\x0d\xac\x0d\x42\x0e\xd8\x0e\x04\x10\x30\x11\x5c\x12\x88\x13\xb4\x14\xe0\x15\x0c\x17\x38\x18\x64\x19\x90\x1a\xbc\x1b\xe8\x1c\x14\x1e\x40\x1f\x6c\x20\x98\x21\xc4\x22\xf0\x23\x1c\x25\x48\x26\x74\x27\xa0\x28";
+    bytes constant bottomIds =
+        "\x11\x10\x12\x0c\x0e\x0d\x0f\x0b\x07\x08\x0a\x09\x06\x05\x04\x03\x02\x01\x00";
+    bytes constant bottomPartialSum =
+        "\x00\x00\x00\x00\x00\x00\x03\x00\x06\x00\x09\x00\x0c\x00\x11\x00\x16\x00\x1b\x00\x20\x00\x25\x00\x2e\x00\x37\x00\x40\x00\x49\x00\x52\x00\x5b\x00\x64\x00";
+
+    function getTraits(uint256 seed) public pure returns (Traits memory) {
+        // The original version used Go's math/rand and https://github.com/mroth/weightedrand
+        // to pick the traits on the back-end and serve that as an API endpoint.
+        // This attempts to faithfully recreate this logic on-chain for
+        // transparency and redundancy's sake.
         Source memory rng = newRand(seed);
-        for (uint256 i = 0; i < 10; i++) {
-            values[i] = Int31n(rng, n);
+
+        Traits memory returned;
+
+        unchecked {
+            // TODO: Investigate using inline bin-search lookup tables for traits
+            // I really would split that into digestible chunk but I don't want to incur the
+            // cost of copying all that data at runtime (can't unsize fixed-size
+            // array as dynamic nor Solidity supports generics for the array size).
+            uint256 i;
+            uint256 j;
+            uint256 h;
+            uint16 readValue;
+            // Class
+            uint256 pick = uint32(Int31n(rng, 60) + 1);
+            (i, j) = (0, classIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(classPartialSum[(2 * h)])) +
+                    (uint16(uint8(classPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.class = uint8(classIds[i]);
+
+            // Body
+            pick = uint32(Int31n(rng, 99) + 1);
+            (i, j) = (0, bodyIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(bodyPartialSum[(2 * h)])) +
+                    (uint16(uint8(bodyPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.body = uint8(bodyIds[i]);
+
+            // Weapon
+            pick = uint32(Int31n(rng, 100) + 1); // fighter<Weapons>
+            (i, j) = (0, weaponIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(weaponPartialSum[(2 * h)])) +
+                    (uint16(uint8(weaponPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.weapon = uint8(weaponIds[i]);
+
+            // Hair
+            pick = uint32(Int31n(rng, 7849) + 1);
+            (i, j) = (0, hairIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(hairPartialSum[(2 * h)])) +
+                    (uint16(uint8(hairPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.hair = uint8(hairIds[i]);
+
+            // Hair color
+            pick = uint32(Int31n(rng, 1000) + 1);
+            (i, j) = (0, hairColorIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(hairColorPartialSum[(2 * h)])) +
+                    (uint16(uint8(hairColorPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.hairColor = uint8(hairColorIds[i]);
+
+            // Back
+            // Archers and Slayers can't equip some backs; the valid item set
+            // and order is wholly different
+            if (returned.class == 0 || returned.class == 3) {
+                pick = uint32(Int31n(rng, 273) + 1);
+                (i, j) = (0, backArcherSlayerId.length);
+                while (i < j) {
+                    h = (i + j) / 2;
+                    // Manually copy over the little-endian-encoded uint16 from the byte stream
+                    readValue =
+                        uint16(uint8(backArcherSlayerPartialSum[(2 * h)])) +
+                        (uint16(
+                            uint8(backArcherSlayerPartialSum[(2 * h) + 1])
+                        ) << 8);
+                    if (readValue < pick) {
+                        i = h + 1;
+                    } else {
+                        j = h;
+                    }
+                }
+                returned.back = uint8(backArcherSlayerId[i]);
+            } else {
+                pick = uint32(Int31n(rng, 290) + 1);
+                (i, j) = (0, backIds.length);
+                while (i < j) {
+                    h = (i + j) / 2;
+                    // Manually copy over the little-endian-encoded uint16 from the byte stream
+                    readValue =
+                        uint16(uint8(backPartialSum[(2 * h)])) +
+                        (uint16(uint8(backPartialSum[(2 * h) + 1])) << 8);
+                    if (readValue < pick) {
+                        i = h + 1;
+                    } else {
+                        j = h;
+                    }
+                }
+                returned.back = uint8(backIds[i]);
+            }
+
+            // Aura
+            pick = uint32(Int31n(rng, 10000) + 1);
+            (i, j) = (0, auraIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(auraPartialSum[(2 * h)])) +
+                    (uint16(uint8(auraPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            returned.aura = uint8(auraIds[i]);
+
+            // Top
+            pick = uint32(Int31n(rng, 10400) + 1);
+            (i, j) = (0, topIds.length);
+            while (i < j) {
+                h = (i + j) / 2;
+                // Manually copy over the little-endian-encoded uint16 from the byte stream
+                readValue =
+                    uint16(uint8(topPartialSum[(2 * h)])) +
+                    (uint16(uint8(topPartialSum[(2 * h) + 1])) << 8);
+                if (readValue < pick) {
+                    i = h + 1;
+                } else {
+                    j = h;
+                }
+            }
+            uint8 top = uint8(topIds[i]);
+            returned.top = top;
+
+            // Bottom
+            if (top == 31) {
+                returned.bottom = 17; // Thrifty Getup set
+            } else if (top == 30) {
+                returned.bottom = 16; // Farmer Apron set
+            } else if (
+                top == 54 ||
+                top == 48 ||
+                (top <= 46 && top >= 40) ||
+                top == 24 ||
+                top == 26 ||
+                top == 29 ||
+                top == 3
+            ) {
+                returned.bottom = 0; // Full-body tops
+            } else {
+                pick = uint32(Int31n(rng, 100) + 1);
+                (i, j) = (0, bottomIds.length);
+                while (i < j) {
+                    h = (i + j) / 2;
+                    // Manually copy over the little-endian-encoded uint16 from the byte stream
+                    readValue =
+                        uint16(uint8(bottomPartialSum[(2 * h)])) +
+                        (uint16(uint8(bottomPartialSum[(2 * h) + 1])) << 8);
+                    if (readValue < pick) {
+                        i = h + 1;
+                    } else {
+                        j = h;
+                    }
+                }
+                returned.bottom = uint8(bottomIds[i]);
+            }
+
+            return returned;
         }
     }
 
-    function computeMany(uint256 seed, int32 n) public pure {
-        Source memory rng = newRand(seed);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
-        Int31n(rng, n);
+    Traits public traits;
+
+    function storeTraits(uint256 seed) public {
+        traits = getTraits(seed);
     }
 
+    // Here is modified Go's math/rand logic optimized for capped on-chain random
+    // number generation.
+    // https://cs.opensource.google/go/go/+/master:src/math/rand/rand.go;l=5;drc=690ac4071fa3e07113bf371c9e74394ab54d6749
     // rand.go
-
     /// @dev Equivalent of Go's `rand.New(rand.NewSource(seed.Int64))`
     /// We only support `rand.Intn`, so we use `Source` directly
     function newRand(uint256 seed) public pure returns (Source memory) {
         // https://etherscan.io/address/0x2ed251752da7f24f33cfbd38438748bb8eeb44e1#readContract
         // seed = getSeed(
-        //   origin = Summon@0x87e738a3d5e5345d6212d8982205a564289e6324,
+        //   origin = Fighter@0x87e738a3d5e5345d6212d8982205a564289e6324,
         //   identifier
         // )
         // Equivalent of `seed.Int64()`
