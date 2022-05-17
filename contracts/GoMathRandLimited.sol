@@ -77,7 +77,7 @@ contract GoMathRandLimited {
     // The original approach used an unstable sort as part of the weighted random
     // selection via https://github.com/mroth/weightedrand. We avoid re-implementing
     // Go's unstable sort here and just hardcode the resulting order of the items.
-    // The inlined bin search was generated with `resource/inline-trait-selection` script.
+    // The inlined bin search was generated with the `resource/inline-trait-selection` script.
     function pickClass(int32 pick) internal pure returns (uint8 id) {
         if (40 < pick) {
             if (60 < pick) {
@@ -903,28 +903,29 @@ contract GoMathRandLimited {
     // rng.go
 
     // NOTE: This is a modified version that allows only for a stream of up to
-    // 10 random numbers to save the PRNG initialization gas cost.
+    // 12 random numbers to save the PRNG initialization gas cost.
+    // Instead of generating and using the full feedback register with 607 numbers,
+    // we pre-generate and use two slices of 12 numbers that are read at first
+    // by the original implementation.
 
     uint16 constant RNG_LEN = 607;
     uint16 constant RNG_TAP = 273;
     uint64 constant RNG_MASK = uint64(type(int64).max);
     int32 constant int32max = type(int32).max;
 
-    uint8 constant RNG_COUNT = 10;
+    uint8 constant RNG_COUNT = 12;
 
     struct Source {
         uint16 tap;
         uint16 feed;
-        // int64[RNG_LEN] vec;
-        int64[RNG_COUNT * 2] vec;
+        int64[RNG_COUNT * 2] vec; // Originally RNG_LEN
     }
 
     // https://cs.opensource.google/go/go/+/master:src/math/rand/rng.go;l=204;drc=2bea43b0e7f3e636ffc8239f9d3fccdd5d763c8b
     // NOTE: We assume seed is not zero
     function Seed(Source memory rng, int64 seed) internal pure {
         rng.tap = 0;
-        rng.feed = RNG_COUNT;
-        // rng.feed = RNG_LEN - RNG_TAP;
+        rng.feed = RNG_COUNT; // Originally RNG_LEN - RNG_TAP
 
         unchecked {
             seed = seed % int32max;
@@ -940,8 +941,8 @@ contract GoMathRandLimited {
         uint256 x = uint64(seed);
         uint256 u;
         unchecked {
-            // NOTE: This is split into two loops comparing to the original to save
-            // on type conversions
+            // NOTE: Comparing to the original loop, we attempt to use as much
+            // pre-computed modular multiplication as possible to save on loop cycles
             // We're dealing with Lehmer (multiplicative congruential) generator,
             // so we can amortize some of the computations due to the fact that
             // x_i = a^i * x_0 mod m = (a^i mod m) * x_0 mod m
@@ -956,14 +957,16 @@ contract GoMathRandLimited {
             // because the original algorithm started with numbers from the middle
             // of the pre-cooked values, simply skip the initial phases, which
             // only internally generated random state.
-            // Here we skip 324 iterations of generating 2 values, so
-            // 48271^(3*324) mod 0x7fffffff = 750037089. (324 = RNG_LEN - RNG_TAP - RNG_COUNT)
+            // Here we skip 322 iterations of generating 3 values, so
+            // 48271^(3*322) mod 0x7fffffff = 1154623084. (322 = RNG_LEN - RNG_TAP - RNG_COUNT)
             assembly {
-                x := mulmod(x, 750037089, 0x7fffffff)
+                x := mulmod(x, 1154623084, 0x7fffffff)
             }
             // Then, we process the part of the generator array originally read
             // by the `feed` cursor (starting from index = RNG_LEN - RNG_TAP - RNG_COUNT)
-            int64[10] memory RNG_COOKED_FEED = [
+            int64[RNG_COUNT] memory RNG_COOKED_FEED = [
+                -3915372517896561773,
+                -2889241648411946534,
                 -6564663803938238204,
                 -8060058171802589521,
                 581945337509520675,
@@ -977,7 +980,6 @@ contract GoMathRandLimited {
             ];
             for (uint256 i = 0; i < RNG_COUNT; i++) {
                 x = seedrand(x);
-
                 u = x << 40;
                 x = seedrand(x);
                 u ^= x << 20;
@@ -988,13 +990,15 @@ contract GoMathRandLimited {
                 rng.vec[i] = int64(uint64(u));
             }
             // Again, we skip again the unnedeed feedback register values...
-            // 48271^(3*263) mod 0x7fffffff = 1483819319.
+            // 48271^(3*261) mod 0x7fffffff = 1819259554.
             assembly {
-                x := mulmod(x, 1483819319, 0x7fffffff)
+                x := mulmod(x, 1819259554, 0x7fffffff)
             }
             // And finally we read the last values originally read by the `tap`
             // cursor (starting from index = RNG_LEN - RNG_COUNT)
-            int64[10] memory RNG_COOKED_TAP = [
+            int64[RNG_COUNT] memory RNG_COOKED_TAP = [
+                -3929437324238184044,
+                -4300543082831323144,
                 -6344160503358350167,
                 5896236396443472108,
                 -758328221503023383,
@@ -1031,15 +1035,13 @@ contract GoMathRandLimited {
     function Uint64(Source memory rng) public pure returns (uint64) {
         unchecked {
             if (rng.tap == 0) {
-                // rng.tap = RNG_LEN - 1;
-                rng.tap = (2 * RNG_COUNT) - 1;
+                rng.tap = (2 * RNG_COUNT) - 1; // Originally RNG_LEN - 1
             } else {
                 rng.tap--;
             }
 
             if (rng.feed == 0) {
-                // rng.feed = RNG_LEN - 1;
-                rng.feed = (2 * RNG_COUNT) - 1;
+                rng.feed = (2 * RNG_COUNT) - 1; // Originally RNG_LEN - 1
             } else {
                 rng.feed--;
             }
