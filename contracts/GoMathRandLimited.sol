@@ -14,50 +14,9 @@ contract GoMathRandLimited {
         uint8 bottom;
     }
 
-    // The original approach used an unstable sort as part of the weighted random
-    // selection via https://github.com/mroth/weightedrand. We avoid re-implementing
-    // Go's unstable sort here and just hardcode the resulting order of the items.
-    // Tightly pack values in a byte array rather than waste 32 bytes on a single ID,
-    // which is what Solidity does for regular arrays.
-    // For partial sums we use a a 2 byte little-endian encoding.
-    bytes constant classIds = "\x00\x01\x02\x03\x04\x05\x06";
-    bytes constant classPartialSum =
-        "\x0a\x00\x14\x00\x1e\x00\x28\x00\x32\x00\x3c\x00";
-    bytes constant bodyIds = "\x05\x03\x04\x00\x01\x02";
-    bytes constant bodyPartialSum =
-        "\x01\x00\x08\x00\x0f\x00\x2b\x00\x47\x00\x63\x00";
-    bytes constant weaponIds = "\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00";
-    bytes constant weaponPartialSum =
-        "\x01\x00\x06\x00\x0c\x00\x13\x00\x1c\x00\x26\x00\x32\x00\x3f\x00\x4e\x00\x64\x00";
-    bytes constant hairIds =
-        "\x11\x02\x03\x13\x04\x0d\x0a\x01\x0b\x10\x0c\x00\x09\x08\x0e\x0f\x07\x06\x12\x05\x14\x15\x16";
-    bytes constant hairPartialSum =
-        "\x0a\x00\x49\x00\x88\x00\xc7\x00\x5d\x01\xf3\x01\x89\x02\xb5\x03\xe1\x04\x0d\x06\x39\x07\x2d\x09\x21\x0b\x15\x0d\x09\x0f\xfd\x10\xf1\x12\xe5\x14\xd9\x16\xcd\x18\xc1\x1a\xb5\x1c\xa9\x1e";
-    bytes constant hairColorIds = "\x06\x01\x04\x03\x02\x05\x00\x07\x08";
-    bytes constant hairColorPartialSum =
-        "\x19\x00\x4b\x00\x7d\x00\xfa\x00\x90\x01\x26\x02\xbc\x02\x52\x03\xe8\x03";
-    bytes constant backIds =
-        "\x0a\x07\x0f\x03\x02\x10\x04\x05\x06\x08\x09\x01\x12\x11\x13\x0e\x0d\x0c\x0b\x00";
-    bytes constant backPartialSum =
-        "\x01\x00\x03\x00\x05\x00\x0a\x00\x0f\x00\x14\x00\x1e\x00\x28\x00\x32\x00\x3c\x00\x46\x00\x50\x00\x5a\x00\x64\x00\x6e\x00\x87\x00\xa0\x00\xb9\x00\xd2\x00\x22\x01";
-    // Archers/Slayers can't have some back items and their lack unstably affects
-    // the order, so consider those separately
-    bytes constant backArcherSlayerId =
-        "\x0a\x0f\x02\x03\x01\x04\x05\x06\x08\x09\x11\x13\x0d\x0e\x0c\x0b\x00";
-    bytes constant backArcherSlayerPartialSum =
-        "\x01\x00\x03\x00\x08\x00\x0d\x00\x17\x00\x21\x00\x2b\x00\x35\x00\x3f\x00\x49\x00\x53\x00\x5d\x00\x76\x00\x8f\x00\xa8\x00\xc1\x00\x11\x01";
-    bytes constant auraIds =
-        "\x02\x0b\x08\x0c\x04\x0a\x06\x0f\x07\x09\x05\x03\x01\x0d\x0e\x00";
-    bytes constant auraPartialSum =
-        "\x32\x00\x64\x00\xaf\x00\xfa\x00\x45\x01\x90\x01\xdb\x01\x26\x02\x8a\x02\xee\x02\x52\x03\xb6\x03\x1a\x04\x7e\x04\xe2\x04\x10\x27";
-    bytes constant topIds =
-        "\x37\x36\x35\x34\x30\x32\x31\x33\x2f\x2e\x2d\x2c\x2b\x2a\x29\x28\x21\x26\x25\x24\x22\x1c\x16\x17\x18\x19\x1a\x1b\x27\x1d\x1e\x1f\x20\x23\x14\x15\x13\x12\x11\x10\x0f\x0e\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00";
-    bytes constant topPartialSum =
-        "\x32\x00\x64\x00\x96\x00\xc8\x00\x13\x01\x5e\x01\xa9\x01\xf4\x01\x3f\x02\x8a\x02\xd5\x02\x20\x03\x6b\x03\xb6\x03\x01\x04\x4c\x04\xe2\x04\x78\x05\x0e\x06\xa4\x06\x3a\x07\xd0\x07\x66\x08\xfc\x08\x92\x09\x28\x0a\xbe\x0a\x54\x0b\xea\x0b\x80\x0c\x16\x0d\xac\x0d\x42\x0e\xd8\x0e\x04\x10\x30\x11\x5c\x12\x88\x13\xb4\x14\xe0\x15\x0c\x17\x38\x18\x64\x19\x90\x1a\xbc\x1b\xe8\x1c\x14\x1e\x40\x1f\x6c\x20\x98\x21\xc4\x22\xf0\x23\x1c\x25\x48\x26\x74\x27\xa0\x28";
-    bytes constant bottomIds =
-        "\x11\x10\x12\x0c\x0e\x0d\x0f\x0b\x07\x08\x0a\x09\x06\x05\x04\x03\x02\x01\x00";
-    bytes constant bottomPartialSum =
-        "\x00\x00\x00\x00\x00\x00\x03\x00\x06\x00\x09\x00\x0c\x00\x11\x00\x16\x00\x1b\x00\x20\x00\x25\x00\x2e\x00\x37\x00\x40\x00\x49\x00\x52\x00\x5b\x00\x64\x00";
+    struct Trait {
+        uint8 id;
+    }
 
     function getTraits(uint256 seed) public pure returns (Traits memory) {
         // The original version used Go's math/rand and https://github.com/mroth/weightedrand
@@ -69,174 +28,23 @@ contract GoMathRandLimited {
         Traits memory returned;
 
         unchecked {
-            // TODO: Investigate using inline bin-search lookup tables for traits
-            // I really would split that into digestible chunk but I don't want to incur the
-            // cost of copying all that data at runtime (can't unsize fixed-size
-            // array as dynamic nor Solidity supports generics for the array size).
-            uint256 i;
-            uint256 j;
-            uint256 h;
-            uint16 readValue;
-            // Class
-            uint256 pick = uint32(Int31n(rng, 60) + 1);
-            (i, j) = (0, classIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(classPartialSum[(2 * h)])) +
-                    (uint16(uint8(classPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.class = uint8(classIds[i]);
-
-            // Body
-            pick = uint32(Int31n(rng, 99) + 1);
-            (i, j) = (0, bodyIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(bodyPartialSum[(2 * h)])) +
-                    (uint16(uint8(bodyPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.body = uint8(bodyIds[i]);
-
-            // Weapon
-            pick = uint32(Int31n(rng, 100) + 1); // fighter<Weapons>
-            (i, j) = (0, weaponIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(weaponPartialSum[(2 * h)])) +
-                    (uint16(uint8(weaponPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.weapon = uint8(weaponIds[i]);
-
-            // Hair
-            pick = uint32(Int31n(rng, 7849) + 1);
-            (i, j) = (0, hairIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(hairPartialSum[(2 * h)])) +
-                    (uint16(uint8(hairPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.hair = uint8(hairIds[i]);
-
-            // Hair color
-            pick = uint32(Int31n(rng, 1000) + 1);
-            (i, j) = (0, hairColorIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(hairColorPartialSum[(2 * h)])) +
-                    (uint16(uint8(hairColorPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.hairColor = uint8(hairColorIds[i]);
-
-            // Back
+            // Pick traits using a weighted random; the upper bound is a sum of
+            // those weights
+            returned.class = pickClass(Int31n(rng, 60) + 1);
+            returned.body = pickBody(Int31n(rng, 99) + 1);
+            returned.weapon = pickWeapon(Int31n(rng, 100) + 1);
+            returned.hair = pickHair(Int31n(rng, 7849) + 1);
+            returned.hairColor = pickHairColor(Int31n(rng, 1000) + 1);
             // Archers and Slayers can't equip some backs; the valid item set
-            // and order is wholly different
+            // and order is wholly different, so we use a different lookup
             if (returned.class == 0 || returned.class == 3) {
-                pick = uint32(Int31n(rng, 273) + 1);
-                (i, j) = (0, backArcherSlayerId.length);
-                while (i < j) {
-                    h = (i + j) / 2;
-                    // Manually copy over the little-endian-encoded uint16 from the byte stream
-                    readValue =
-                        uint16(uint8(backArcherSlayerPartialSum[(2 * h)])) +
-                        (uint16(
-                            uint8(backArcherSlayerPartialSum[(2 * h) + 1])
-                        ) << 8);
-                    if (readValue < pick) {
-                        i = h + 1;
-                    } else {
-                        j = h;
-                    }
-                }
-                returned.back = uint8(backArcherSlayerId[i]);
+                returned.back = pickBackArcherSlayer(Int31n(rng, 273) + 1);
             } else {
-                pick = uint32(Int31n(rng, 290) + 1);
-                (i, j) = (0, backIds.length);
-                while (i < j) {
-                    h = (i + j) / 2;
-                    // Manually copy over the little-endian-encoded uint16 from the byte stream
-                    readValue =
-                        uint16(uint8(backPartialSum[(2 * h)])) +
-                        (uint16(uint8(backPartialSum[(2 * h) + 1])) << 8);
-                    if (readValue < pick) {
-                        i = h + 1;
-                    } else {
-                        j = h;
-                    }
-                }
-                returned.back = uint8(backIds[i]);
+                returned.back = pickBack(Int31n(rng, 290) + 1);
             }
-
-            // Aura
-            pick = uint32(Int31n(rng, 10000) + 1);
-            (i, j) = (0, auraIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(auraPartialSum[(2 * h)])) +
-                    (uint16(uint8(auraPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            returned.aura = uint8(auraIds[i]);
-
-            // Top
-            pick = uint32(Int31n(rng, 10400) + 1);
-            (i, j) = (0, topIds.length);
-            while (i < j) {
-                h = (i + j) / 2;
-                // Manually copy over the little-endian-encoded uint16 from the byte stream
-                readValue =
-                    uint16(uint8(topPartialSum[(2 * h)])) +
-                    (uint16(uint8(topPartialSum[(2 * h) + 1])) << 8);
-                if (readValue < pick) {
-                    i = h + 1;
-                } else {
-                    j = h;
-                }
-            }
-            uint8 top = uint8(topIds[i]);
-            returned.top = top;
-
-            // Bottom
+            returned.aura = pickAura(Int31n(rng, 10000) + 1);
+            returned.top = pickTop(Int31n(rng, 10400) + 1);
+            uint8 top = returned.top;
             if (top == 31) {
                 returned.bottom = 17; // Thrifty Getup set
             } else if (top == 30) {
@@ -252,21 +60,7 @@ contract GoMathRandLimited {
             ) {
                 returned.bottom = 0; // Full-body tops
             } else {
-                pick = uint32(Int31n(rng, 100) + 1);
-                (i, j) = (0, bottomIds.length);
-                while (i < j) {
-                    h = (i + j) / 2;
-                    // Manually copy over the little-endian-encoded uint16 from the byte stream
-                    readValue =
-                        uint16(uint8(bottomPartialSum[(2 * h)])) +
-                        (uint16(uint8(bottomPartialSum[(2 * h) + 1])) << 8);
-                    if (readValue < pick) {
-                        i = h + 1;
-                    } else {
-                        j = h;
-                    }
-                }
-                returned.bottom = uint8(bottomIds[i]);
+                returned.bottom = pickBottom(Int31n(rng, 100) + 1);
             }
 
             return returned;
@@ -279,8 +73,782 @@ contract GoMathRandLimited {
         traits = getTraits(seed);
     }
 
-    // Here is modified Go's math/rand logic optimized for capped on-chain random
-    // number generation.
+    // HERE BE DRAGONS
+    // The original approach used an unstable sort as part of the weighted random
+    // selection via https://github.com/mroth/weightedrand. We avoid re-implementing
+    // Go's unstable sort here and just hardcode the resulting order of the items.
+    // The inlined bin search was generated with `resource/inline-trait-selection` script.
+    function pickClass(int32 pick) internal pure returns (uint8 id) {
+        if (40 < pick) {
+            if (60 < pick) {
+                require(false, "Value out of bounds");
+            } else {
+                if (50 < pick) {
+                    return (5);
+                } else {
+                    return (4);
+                }
+            }
+        } else {
+            if (20 < pick) {
+                if (30 < pick) {
+                    return (3);
+                } else {
+                    return (2);
+                }
+            } else {
+                if (10 < pick) {
+                    return (1);
+                } else {
+                    return (0);
+                }
+            }
+        }
+    }
+
+    function pickBody(int32 pick) internal pure returns (uint8 id) {
+        if (43 < pick) {
+            if (99 < pick) {
+                require(false, "Value out of bounds");
+            } else {
+                if (71 < pick) {
+                    return (2);
+                } else {
+                    return (1);
+                }
+            }
+        } else {
+            if (8 < pick) {
+                if (15 < pick) {
+                    return (0);
+                } else {
+                    return (4);
+                }
+            } else {
+                if (1 < pick) {
+                    return (3);
+                } else {
+                    return (5);
+                }
+            }
+        }
+    }
+
+    function pickWeapon(int32 pick) internal pure returns (uint8 id) {
+        if (38 < pick) {
+            if (78 < pick) {
+                if (100 < pick) {
+                    require(false, "Value out of bounds");
+                } else {
+                    return (0);
+                }
+            } else {
+                if (63 < pick) {
+                    return (1);
+                } else {
+                    if (50 < pick) {
+                        return (2);
+                    } else {
+                        return (3);
+                    }
+                }
+            }
+        } else {
+            if (12 < pick) {
+                if (28 < pick) {
+                    return (4);
+                } else {
+                    if (19 < pick) {
+                        return (5);
+                    } else {
+                        return (6);
+                    }
+                }
+            } else {
+                if (6 < pick) {
+                    return (7);
+                } else {
+                    if (1 < pick) {
+                        return (8);
+                    } else {
+                        return (9);
+                    }
+                }
+            }
+        }
+    }
+
+    function pickHair(int32 pick) internal pure returns (uint8 id) {
+        if (2349 < pick) {
+            if (5349 < pick) {
+                if (6849 < pick) {
+                    if (7849 < pick) {
+                        require(false, "Value out of bounds");
+                    } else {
+                        if (7349 < pick) {
+                            return (22);
+                        } else {
+                            return (21);
+                        }
+                    }
+                } else {
+                    if (6349 < pick) {
+                        return (20);
+                    } else {
+                        if (5849 < pick) {
+                            return (5);
+                        } else {
+                            return (18);
+                        }
+                    }
+                }
+            } else {
+                if (3849 < pick) {
+                    if (4849 < pick) {
+                        return (6);
+                    } else {
+                        if (4349 < pick) {
+                            return (7);
+                        } else {
+                            return (15);
+                        }
+                    }
+                } else {
+                    if (3349 < pick) {
+                        return (14);
+                    } else {
+                        if (2849 < pick) {
+                            return (8);
+                        } else {
+                            return (9);
+                        }
+                    }
+                }
+            }
+        } else {
+            if (499 < pick) {
+                if (1249 < pick) {
+                    if (1849 < pick) {
+                        return (0);
+                    } else {
+                        if (1549 < pick) {
+                            return (12);
+                        } else {
+                            return (16);
+                        }
+                    }
+                } else {
+                    if (949 < pick) {
+                        return (11);
+                    } else {
+                        if (649 < pick) {
+                            return (1);
+                        } else {
+                            return (10);
+                        }
+                    }
+                }
+            } else {
+                if (136 < pick) {
+                    if (349 < pick) {
+                        return (13);
+                    } else {
+                        if (199 < pick) {
+                            return (4);
+                        } else {
+                            return (19);
+                        }
+                    }
+                } else {
+                    if (73 < pick) {
+                        return (3);
+                    } else {
+                        if (10 < pick) {
+                            return (2);
+                        } else {
+                            return (17);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function pickHairColor(int32 pick) internal pure returns (uint8 id) {
+        if (400 < pick) {
+            if (850 < pick) {
+                if (1000 < pick) {
+                    require(false, "Value out of bounds");
+                } else {
+                    return (8);
+                }
+            } else {
+                if (700 < pick) {
+                    return (7);
+                } else {
+                    if (550 < pick) {
+                        return (0);
+                    } else {
+                        return (5);
+                    }
+                }
+            }
+        } else {
+            if (125 < pick) {
+                if (250 < pick) {
+                    return (2);
+                } else {
+                    return (3);
+                }
+            } else {
+                if (75 < pick) {
+                    return (4);
+                } else {
+                    if (25 < pick) {
+                        return (1);
+                    } else {
+                        return (6);
+                    }
+                }
+            }
+        }
+    }
+
+    function pickBack(int32 pick) internal pure returns (uint8 id) {
+        if (70 < pick) {
+            if (135 < pick) {
+                if (210 < pick) {
+                    if (290 < pick) {
+                        require(false, "Value out of bounds");
+                    } else {
+                        return (0);
+                    }
+                } else {
+                    if (185 < pick) {
+                        return (11);
+                    } else {
+                        if (160 < pick) {
+                            return (12);
+                        } else {
+                            return (13);
+                        }
+                    }
+                }
+            } else {
+                if (100 < pick) {
+                    if (110 < pick) {
+                        return (14);
+                    } else {
+                        return (19);
+                    }
+                } else {
+                    if (90 < pick) {
+                        return (17);
+                    } else {
+                        if (80 < pick) {
+                            return (18);
+                        } else {
+                            return (1);
+                        }
+                    }
+                }
+            }
+        } else {
+            if (20 < pick) {
+                if (50 < pick) {
+                    if (60 < pick) {
+                        return (9);
+                    } else {
+                        return (8);
+                    }
+                } else {
+                    if (40 < pick) {
+                        return (6);
+                    } else {
+                        if (30 < pick) {
+                            return (5);
+                        } else {
+                            return (4);
+                        }
+                    }
+                }
+            } else {
+                if (5 < pick) {
+                    if (15 < pick) {
+                        return (16);
+                    } else {
+                        if (10 < pick) {
+                            return (2);
+                        } else {
+                            return (3);
+                        }
+                    }
+                } else {
+                    if (3 < pick) {
+                        return (15);
+                    } else {
+                        if (1 < pick) {
+                            return (7);
+                        } else {
+                            return (10);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function pickBackArcherSlayer(int32 pick) internal pure returns (uint8 id) {
+        if (63 < pick) {
+            if (143 < pick) {
+                if (193 < pick) {
+                    if (273 < pick) {
+                        require(false, "Value out of bounds");
+                    } else {
+                        return (0);
+                    }
+                } else {
+                    if (168 < pick) {
+                        return (11);
+                    } else {
+                        return (12);
+                    }
+                }
+            } else {
+                if (93 < pick) {
+                    if (118 < pick) {
+                        return (14);
+                    } else {
+                        return (13);
+                    }
+                } else {
+                    if (83 < pick) {
+                        return (19);
+                    } else {
+                        if (73 < pick) {
+                            return (17);
+                        } else {
+                            return (9);
+                        }
+                    }
+                }
+            }
+        } else {
+            if (23 < pick) {
+                if (43 < pick) {
+                    if (53 < pick) {
+                        return (8);
+                    } else {
+                        return (6);
+                    }
+                } else {
+                    if (33 < pick) {
+                        return (5);
+                    } else {
+                        return (4);
+                    }
+                }
+            } else {
+                if (8 < pick) {
+                    if (13 < pick) {
+                        return (1);
+                    } else {
+                        return (3);
+                    }
+                } else {
+                    if (3 < pick) {
+                        return (2);
+                    } else {
+                        if (1 < pick) {
+                            return (15);
+                        } else {
+                            return (10);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function pickAura(int32 pick) internal pure returns (uint8 id) {
+        if (650 < pick) {
+            if (1050 < pick) {
+                if (1250 < pick) {
+                    if (10000 < pick) {
+                        require(false, "Value out of bounds");
+                    } else {
+                        return (0);
+                    }
+                } else {
+                    if (1150 < pick) {
+                        return (14);
+                    } else {
+                        return (13);
+                    }
+                }
+            } else {
+                if (850 < pick) {
+                    if (950 < pick) {
+                        return (1);
+                    } else {
+                        return (3);
+                    }
+                } else {
+                    if (750 < pick) {
+                        return (5);
+                    } else {
+                        return (9);
+                    }
+                }
+            }
+        } else {
+            if (325 < pick) {
+                if (475 < pick) {
+                    if (550 < pick) {
+                        return (7);
+                    } else {
+                        return (15);
+                    }
+                } else {
+                    if (400 < pick) {
+                        return (6);
+                    } else {
+                        return (10);
+                    }
+                }
+            } else {
+                if (175 < pick) {
+                    if (250 < pick) {
+                        return (4);
+                    } else {
+                        return (12);
+                    }
+                } else {
+                    if (100 < pick) {
+                        return (8);
+                    } else {
+                        if (50 < pick) {
+                            return (11);
+                        } else {
+                            return (2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function pickTop(int32 pick) internal pure returns (uint8 id) {
+        if (3050 < pick) {
+            if (6500 < pick) {
+                if (8600 < pick) {
+                    if (9800 < pick) {
+                        if (10400 < pick) {
+                            require(false, "Value out of bounds");
+                        } else {
+                            if (10100 < pick) {
+                                return (0);
+                            } else {
+                                return (1);
+                            }
+                        }
+                    } else {
+                        if (9200 < pick) {
+                            if (9500 < pick) {
+                                return (2);
+                            } else {
+                                return (3);
+                            }
+                        } else {
+                            if (8900 < pick) {
+                                return (4);
+                            } else {
+                                return (5);
+                            }
+                        }
+                    }
+                } else {
+                    if (7700 < pick) {
+                        if (8300 < pick) {
+                            return (6);
+                        } else {
+                            if (8000 < pick) {
+                                return (7);
+                            } else {
+                                return (8);
+                            }
+                        }
+                    } else {
+                        if (7100 < pick) {
+                            if (7400 < pick) {
+                                return (9);
+                            } else {
+                                return (10);
+                            }
+                        } else {
+                            if (6800 < pick) {
+                                return (11);
+                            } else {
+                                return (12);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (4400 < pick) {
+                    if (5600 < pick) {
+                        if (6200 < pick) {
+                            return (13);
+                        } else {
+                            if (5900 < pick) {
+                                return (14);
+                            } else {
+                                return (15);
+                            }
+                        }
+                    } else {
+                        if (5000 < pick) {
+                            if (5300 < pick) {
+                                return (16);
+                            } else {
+                                return (17);
+                            }
+                        } else {
+                            if (4700 < pick) {
+                                return (18);
+                            } else {
+                                return (19);
+                            }
+                        }
+                    }
+                } else {
+                    if (3650 < pick) {
+                        if (4100 < pick) {
+                            return (21);
+                        } else {
+                            if (3800 < pick) {
+                                return (20);
+                            } else {
+                                return (35);
+                            }
+                        }
+                    } else {
+                        if (3350 < pick) {
+                            if (3500 < pick) {
+                                return (32);
+                            } else {
+                                return (31);
+                            }
+                        } else {
+                            if (3200 < pick) {
+                                return (30);
+                            } else {
+                                return (29);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (1025 < pick) {
+                if (2000 < pick) {
+                    if (2600 < pick) {
+                        if (2900 < pick) {
+                            return (39);
+                        } else {
+                            if (2750 < pick) {
+                                return (27);
+                            } else {
+                                return (26);
+                            }
+                        }
+                    } else {
+                        if (2300 < pick) {
+                            if (2450 < pick) {
+                                return (25);
+                            } else {
+                                return (24);
+                            }
+                        } else {
+                            if (2150 < pick) {
+                                return (23);
+                            } else {
+                                return (22);
+                            }
+                        }
+                    }
+                } else {
+                    if (1550 < pick) {
+                        if (1850 < pick) {
+                            return (28);
+                        } else {
+                            if (1700 < pick) {
+                                return (34);
+                            } else {
+                                return (36);
+                            }
+                        }
+                    } else {
+                        if (1250 < pick) {
+                            if (1400 < pick) {
+                                return (37);
+                            } else {
+                                return (38);
+                            }
+                        } else {
+                            if (1100 < pick) {
+                                return (33);
+                            } else {
+                                return (40);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (500 < pick) {
+                    if (800 < pick) {
+                        if (950 < pick) {
+                            return (41);
+                        } else {
+                            if (875 < pick) {
+                                return (42);
+                            } else {
+                                return (43);
+                            }
+                        }
+                    } else {
+                        if (650 < pick) {
+                            if (725 < pick) {
+                                return (44);
+                            } else {
+                                return (45);
+                            }
+                        } else {
+                            if (575 < pick) {
+                                return (46);
+                            } else {
+                                return (47);
+                            }
+                        }
+                    }
+                } else {
+                    if (200 < pick) {
+                        if (350 < pick) {
+                            if (425 < pick) {
+                                return (51);
+                            } else {
+                                return (49);
+                            }
+                        } else {
+                            if (275 < pick) {
+                                return (50);
+                            } else {
+                                return (48);
+                            }
+                        }
+                    } else {
+                        if (100 < pick) {
+                            if (150 < pick) {
+                                return (52);
+                            } else {
+                                return (53);
+                            }
+                        } else {
+                            if (50 < pick) {
+                                return (54);
+                            } else {
+                                return (55);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function pickBottom(int32 pick) internal pure returns (uint8 id) {
+        if (27 < pick) {
+            if (64 < pick) {
+                if (91 < pick) {
+                    if (100 < pick) {
+                        require(false, "Value out of bounds");
+                    } else {
+                        return (0);
+                    }
+                } else {
+                    if (82 < pick) {
+                        return (1);
+                    } else {
+                        if (73 < pick) {
+                            return (2);
+                        } else {
+                            return (3);
+                        }
+                    }
+                }
+            } else {
+                if (46 < pick) {
+                    if (55 < pick) {
+                        return (4);
+                    } else {
+                        return (5);
+                    }
+                } else {
+                    if (37 < pick) {
+                        return (6);
+                    } else {
+                        if (32 < pick) {
+                            return (9);
+                        } else {
+                            return (10);
+                        }
+                    }
+                }
+            }
+        } else {
+            if (6 < pick) {
+                if (17 < pick) {
+                    if (22 < pick) {
+                        return (8);
+                    } else {
+                        return (7);
+                    }
+                } else {
+                    if (12 < pick) {
+                        return (11);
+                    } else {
+                        if (9 < pick) {
+                            return (15);
+                        } else {
+                            return (13);
+                        }
+                    }
+                }
+            } else {
+                if (0 < pick) {
+                    if (3 < pick) {
+                        return (14);
+                    } else {
+                        return (12);
+                    }
+                } else {
+                    if (0 < pick) {
+                        return (18);
+                    } else {
+                        if (0 < pick) {
+                            return (16);
+                        } else {
+                            return (17);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Here is the modified Go's math/rand logic optimized for capped, on-chain
+    // random number generation.
+    //
     // https://cs.opensource.google/go/go/+/master:src/math/rand/rand.go;l=5;drc=690ac4071fa3e07113bf371c9e74394ab54d6749
     // rand.go
     /// @dev Equivalent of Go's `rand.New(rand.NewSource(seed.Int64))`

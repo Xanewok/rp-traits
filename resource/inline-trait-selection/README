@@ -1,0 +1,4 @@
+## Example
+```
+cat ../traits_go_sorted.json | jq '.fighterBodies' | cargo run
+```
