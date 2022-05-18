@@ -1,19 +1,7 @@
 #![feature(io_read_to_string)]
-// fn main() {
-// 	let input: Vec<u16> = std::io::stdin().lines().map(|line| line.unwrap().parse::<u16>().unwrap()).collect();
 
-// 	let mut sums = Vec::<u16>::with_capacity(input.len());
-// 	let mut running_total = 0u16;
-
-// 	for value in input {
-// 		running_total += value;
-// 		sums.push(running_total);
-// 	}
-
-// 	for value in sums.iter().flat_map(|value| value.to_le_bytes()) {
-// 		print!("\\x{:02x}", value)
-// 	}
-// }
+use std::str::FromStr;
+use std::fmt::Display;
 
 fn partial_sums(values: &[u16]) -> Vec<u16> {
     let mut sums = Vec::with_capacity(values.len());
@@ -26,10 +14,6 @@ fn partial_sums(values: &[u16]) -> Vec<u16> {
 
     return sums;
 }
-
-use std::str::FromStr;
-
-use std::fmt::Display;
 
 #[derive(Debug)]
 struct Trait {

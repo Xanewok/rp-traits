@@ -1,7 +1,7 @@
 {
   "fighterClasses": [
     {
-      "feature": "Class",
+      "feature": "class",
       "id": 0,
       "name": "Slayer",
       "weight": 10,
@@ -27,19 +27,19 @@
       ]
     },
     {
-      "feature": "Class",
+      "feature": "class",
       "id": 1,
       "name": "Paladin",
       "weight": 10
     },
     {
-      "feature": "Class",
+      "feature": "class",
       "id": 2,
       "name": "Lancer",
       "weight": 10
     },
     {
-      "feature": "Class",
+      "feature": "class",
       "id": 3,
       "name": "Archer",
       "weight": 10,
@@ -65,7 +65,7 @@
       ]
     },
     {
-      "feature": "Class",
+      "feature": "class",
       "id": 4,
       "name": "Mage",
       "weight": 10
@@ -671,55 +671,55 @@
   ],
   "fighterHairColors": [
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 6,
       "name": "White",
       "weight": 25
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 1,
       "name": "Pink",
       "weight": 50
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 4,
       "name": "Red",
       "weight": 50
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 3,
       "name": "Violet",
       "weight": 125
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 2,
       "name": "Green",
       "weight": 150
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 5,
       "name": "Black",
       "weight": 150
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 0,
       "name": "Blue",
       "weight": 150
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 7,
       "name": "Blonde",
       "weight": 150
     },
     {
-      "feature": "hairColors",
+      "feature": "hairColor",
       "id": 8,
       "name": "Brown",
       "weight": 150

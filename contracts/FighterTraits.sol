@@ -1,7 +1,52 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8;
 
-contract GoMathRandLimited {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+interface ISeeder {
+    function isSeeded(address origin, uint256 identifier)
+        external
+        view
+        returns (bool);
+
+    function getSeed(address origin, uint256 identifier)
+        external
+        view
+        returns (uint256);
+}
+
+/// @title RaidParty Fighter Trait Generation, on-chain version
+/// @author xanewok.eth
+/// @notice This is a recreation of the original trait generation logic
+/// on-chain for transparency and redundancy's sake. The traits calculated here
+/// are only numerical and do not carry a user-facing name to limit the scope
+// and to save on gas. The trait ID <-> name mapping should be available publicly,
+// however it is not stored on the chain for the time being.
+contract FighterTraits is Ownable {
+    address _fighter;
+    address _seeder;
+
+    constructor(address fighter, address seeder) {
+        _fighter = fighter;
+        _seeder = seeder;
+    }
+
+    function setFighter(address fighter) external onlyOwner {
+        _fighter = fighter;
+    }
+
+    function setSeeder(address fighter) external onlyOwner {
+        _fighter = fighter;
+    }
+
+    function isSeeded(uint256 identifier) public view returns (bool) {
+        return ISeeder(_seeder).isSeeded(_fighter, identifier);
+    }
+
+    function getSeed(uint256 identifier) public view returns (uint256) {
+        return ISeeder(_seeder).getSeed(_fighter, identifier);
+    }
+
     struct Traits {
         uint8 class;
         uint8 body;
@@ -14,11 +59,12 @@ contract GoMathRandLimited {
         uint8 bottom;
     }
 
-    struct Trait {
-        uint8 id;
-    }
-
-    function getTraits(uint256 seed) public pure returns (Traits memory) {
+    /// @notice Retrieve raw trait IDs for a given seed value.
+    function getStartingTraitsBySeed(uint256 seed)
+        public
+        pure
+        returns (Traits memory)
+    {
         // The original version used Go's math/rand and https://github.com/mroth/weightedrand
         // to pick the traits on the back-end and serve that as an API endpoint.
         // This attempts to faithfully recreate this logic on-chain for
@@ -58,7 +104,7 @@ contract GoMathRandLimited {
                 top == 29 ||
                 top == 3
             ) {
-                returned.bottom = 0; // Full-body tops
+                returned.bottom = 18; // Full-body tops, return "None"
             } else {
                 returned.bottom = pickBottom(Int31n(rng, 100) + 1);
             }
@@ -67,17 +113,21 @@ contract GoMathRandLimited {
         }
     }
 
-    Traits public traits;
-
-    function storeTraits(uint256 seed) public {
-        traits = getTraits(seed);
+    /// @notice Retrieves the default trait IDs for a given tokenId
+    function getStartingTraitsById(uint256 identifier)
+        public
+        view
+        returns (Traits memory)
+    {
+        uint256 seed = getSeed(identifier);
+        return getStartingTraitsBySeed(seed);
     }
 
     // HERE BE DRAGONS
     // The original approach used an unstable sort as part of the weighted random
     // selection via https://github.com/mroth/weightedrand. We avoid re-implementing
     // Go's unstable sort here and just hardcode the resulting order of the items.
-    // The inlined bin search was generated with the `resource/inline-trait-selection` script.
+    // The inlined bin lookup was generated with the `resource/inline-trait-selection` script.
     function pickClass(int32 pick) internal pure returns (uint8 id) {
         if (40 < pick) {
             if (60 < pick) {

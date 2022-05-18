@@ -1,67 +1,74 @@
-// A helper program that helps compare the reference Go PRNG with the translated
-// Solidity version
-
+// The original logic used to roll the fighter traits
 package main
 
 import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"sort"
 )
 
-func main() {
-	src := rand.New(rand.NewSource(911))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
-	fmt.Printf("%d\n", src.Intn(35))
+// Clash/force logic
+// func pickTrait(fighter Fighter, traits []Trait, src *rand.Rand) Trait {
 
-	fmt.Println("Now bigints")
+// 	// For all traits in hero, if the hero trait feature has a forced trait,
+// 	// and the forced trait matches the given traitset, force the trait.
+
+// 	for _, trait := range fighter {
+// 		if len(trait.force) != 0 {
+// 			if trait.force[0].feature == traits[0].feature {
+// 				return trait.force[0]
+// 			}
+// 		}
+// 	}
+
+// 	// Make array of current clash traits, and declare an array of filtered traits.
+// 	clashes := buildFighterClashes(fighter)
+// 	filteredTraits := traits
+
+// 	// For each clash, and for each given trait in the trait set,
+// 	// if the clash feature matches the feature of the trait,
+// 	// and their id's are the same, remove the clash trait from
+// 	// the set of filtered traits.
+// 	if len(fighter) > 0 {
+// 		for _, c := range clashes {
+// 			for _, t := range traits {
+// 				if c.feature == traits[0].feature {
+// 					if c.id == t.id {
+// 						filteredTraits = remove(filteredTraits, c.id)
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Make array of weighted choices
+// 	var choices []wr.Choice
+// 	for _, s := range filteredTraits {
+// 		choices = append(choices, wr.Choice{Item: s.id, Weight: uint(s.weight)})
+// 	}
+// 	chooser, _ := wr.NewChooser(choices...)
+// 	result := chooser.PickSource(src).(int)
+
+// 	for _, t := range filteredTraits {
+// 		if result == t.id {
+// 			return t
+// 		}
+// 	}
+
+// 	return Trait{id: 0, name: "NONE"}
+// }
+
+func main() {
 	// https://etherscan.io/address/0x2ed251752da7f24f33cfbd38438748bb8eeb44e1#readContract
 	// getSeed(0x87e738a3d5e5345d6212d8982205a564289e6324, 32175)
 	// = 105779926529366228504990970003713286107530024193944566341142813727459338091771
 	seed := new(big.Int)
-	seed, ok := seed.SetString("105779926529366228504990970003713286107530024193944566341142813727459338091771", 10)
+	seed, ok := seed.SetString("2539103265505867606901872458139978623723014567987151303084214062672181312887", 10)
 	if !ok {
 		fmt.Println("SetString: error")
 		return
 	}
-	src = rand.New(rand.NewSource(seed.Int64()))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-	fmt.Printf("%d\n", src.Intn(50000000))
-
-	var choices []Choice
-	for _, s := range fighterBottoms {
-		choices = append(choices, Choice{Item: s.id, Weight: uint(s.weight), Name: s.name})
-	}
-
-	sort.Slice(choices, func(i, j int) bool {
-		return choices[i].Weight < choices[j].Weight
-	})
-	fmt.Println(choices)
-
-	fmt.Println("Now tokens")
-	seed, ok = seed.SetString("2539103265505867606901872458139978623723014567987151303084214062672181312887", 10)
-	if !ok {
-		fmt.Println("SetString: error")
-		return
-	}
-	src = rand.New(rand.NewSource(seed.Int64()))
+	src := rand.New(rand.NewSource(seed.Int64()))
 	fmt.Printf("%d\n", src.Intn(60)+1)   // fighterClasses / 10
 	fmt.Printf("%d\n", src.Intn(99)+1)   // fighterBodies
 	fmt.Printf("%d\n", src.Intn(100)+1)  // fighter<Weapons>
@@ -103,8 +110,10 @@ func main() {
 	// f["aura"] = pickTrait(f, fighterAuras, src)
 	// f["top"] = pickTrait(f, fighterTops, src)
 	// f["bottom"] = pickTrait(f, fighterBottoms, src)
+
 }
 
+// Actual values
 type Trait struct {
 	feature    string
 	id         int
@@ -115,10 +124,223 @@ type Trait struct {
 	force      []Trait
 }
 
-type Choice struct {
-	Item   interface{}
-	Weight uint
-	Name   string
+var fighterBows = []Trait{
+	{
+		feature:    "weapon",
+		id:         0,
+		name:       "Wooden",
+		weight:     22,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         1,
+		name:       "Longbow",
+		weight:     15,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         2,
+		name:       "Compound",
+		weight:     13,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         3,
+		name:       "Quartz Shot",
+		weight:     12,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         4,
+		name:       "Waterweaver",
+		weight:     10,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         5,
+		name:       "Faerie",
+		weight:     9,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         6,
+		name:       "Black Hole",
+		weight:     7,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         7,
+		name:       "Beelzebub",
+		weight:     6,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         8,
+		name:       "Raphael",
+		weight:     5,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         9,
+		name:       "Gandiva",
+		weight:     1,
+		properties: []string{"hasBack"},
+	},
+}
+
+var fighterWands = []Trait{
+	{
+		feature:    "weapon",
+		id:         0,
+		name:       "Elder Staff",
+		weight:     22,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         1,
+		name:       "Dream Catcher",
+		weight:     15,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         2,
+		name:       "Antenna",
+		weight:     13,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         3,
+		name:       "Chrysoberyl",
+		weight:     12,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         4,
+		name:       "Monsoon",
+		weight:     10,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         5,
+		name:       "Sands of Time",
+		weight:     9,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         6,
+		name:       "Eclipse",
+		weight:     7,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         7,
+		name:       "Original Sin",
+		weight:     6,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         8,
+		name:       "Gabriel",
+		weight:     5,
+		properties: []string{"hasBack", "mage"},
+	},
+	{
+		feature:    "weapon",
+		id:         9,
+		name:       "Yata",
+		weight:     1,
+		properties: []string{"hasBack", "mage"},
+	},
+}
+
+var fighterThrown = []Trait{
+	{
+		feature:    "weapon",
+		id:         0,
+		name:       "Knife",
+		weight:     22,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         1,
+		name:       "Shuriken",
+		weight:     15,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         2,
+		name:       "Syringe",
+		weight:     13,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         3,
+		name:       "Cystal Fragments",
+		weight:     12,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         4,
+		name:       "Cinders",
+		weight:     10,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         5,
+		name:       "Sacrificial",
+		weight:     9,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         6,
+		name:       "Stars",
+		weight:     7,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         7,
+		name:       "Deception",
+		weight:     6,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         8,
+		name:       "Heaven",
+		weight:     5,
+		properties: []string{"hasBack"},
+	},
+	{
+		feature:    "weapon",
+		id:         9,
+		name:       "Parazonium",
+		weight:     1,
+		properties: []string{"hasBack"},
+	},
 }
 
 var fighterSwords = []Trait{
@@ -390,7 +612,13 @@ var fighterBacks = []Trait{
 		weight:     10,
 		properties: []string{""},
 	},
-
+	{
+		feature:    "back",
+		id:         7,
+		name:       "Danger Coat",
+		weight:     2,
+		properties: []string{""},
+	},
 	{
 		feature:    "back",
 		id:         8,
@@ -447,7 +675,13 @@ var fighterBacks = []Trait{
 		weight:     2,
 		properties: []string{""},
 	},
-
+	{
+		feature:    "back",
+		id:         16,
+		name:       "Black Tassels",
+		weight:     5,
+		properties: []string{""},
+	},
 	{
 		feature:    "back",
 		id:         17,
@@ -455,7 +689,13 @@ var fighterBacks = []Trait{
 		weight:     10,
 		properties: []string{""},
 	},
-
+	{
+		feature:    "back",
+		id:         18,
+		name:       "Green Cape",
+		weight:     10,
+		properties: []string{""},
+	},
 	{
 		feature:    "back",
 		id:         19,
