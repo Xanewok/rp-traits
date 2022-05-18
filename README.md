@@ -1,6 +1,6 @@
 # FighterTraits
 
-An on-chain implementation of the random generation logic used by the Raid Party.
+An on-chain implementation of the random trait generation logic used by the Raid Party.
 
 ## Additional `/resource`s
 - /reference.go - The reference Go implementation used by the API endpoint to calculate traits
